@@ -77,14 +77,17 @@ def get_monthly_stats():
         ORDER BY month
     """).fetchall()
     conn.close()
-    return [{"month": r["month"], "total": r["total"]} for r in rows]
+    return [
+        {"month": r["month"], "total": int(r["total"]) if r["total"] is not None else 0}
+        for r in rows
+    ]
 
 
 def get_weekday_stats():
     conn = get_connection()
     rows = conn.execute("""
         SELECT
-            CAST(strftime('%w', checkin_time) AS INTEGER) AS weekday,
+            strftime('%w', checkin_time) AS weekday,
             COUNT(*) AS total
         FROM checkin_records
         GROUP BY weekday
@@ -95,8 +98,13 @@ def get_weekday_stats():
     weekday_names = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
     ordered = [0, 1, 2, 3, 4, 5, 6]
 
+    row_map = {}
+    for r in rows:
+        wd = int(r["weekday"]) if r["weekday"] is not None else 0
+        total = int(r["total"]) if r["total"] is not None else 0
+        row_map[wd] = total
+
     result = []
-    row_map = {r["weekday"]: r["total"] for r in rows}
     for wd in ordered:
         result.append({
             "weekday": wd,

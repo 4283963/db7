@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from database import init_db, get_monthly_stats, get_weekday_stats
 
 app = FastAPI(title="社群签到统计工具")
@@ -12,16 +13,35 @@ app.add_middleware(
 )
 
 
+class MonthlyItem(BaseModel):
+    month: str
+    total: int
+
+
+class MonthlyResponse(BaseModel):
+    data: list[MonthlyItem]
+
+
+class WeekdayItem(BaseModel):
+    weekday: int
+    weekday_name: str
+    total: int
+
+
+class WeekdayResponse(BaseModel):
+    data: list[WeekdayItem]
+
+
 @app.on_event("startup")
 def on_startup():
     init_db()
 
 
-@app.get("/api/stats/monthly")
+@app.get("/api/stats/monthly", response_model=MonthlyResponse)
 def monthly_stats():
     return {"data": get_monthly_stats()}
 
 
-@app.get("/api/stats/weekday")
+@app.get("/api/stats/weekday", response_model=WeekdayResponse)
 def weekday_stats():
     return {"data": get_weekday_stats()}
