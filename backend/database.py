@@ -66,16 +66,27 @@ def _seed_data(conn):
     conn.commit()
 
 
-def get_monthly_stats():
+def get_monthly_stats(year=None):
     conn = get_connection()
-    rows = conn.execute("""
-        SELECT
-            strftime('%Y-%m', checkin_time) AS month,
-            COUNT(*) AS total
-        FROM checkin_records
-        GROUP BY month
-        ORDER BY month
-    """).fetchall()
+    if year:
+        rows = conn.execute("""
+            SELECT
+                strftime('%Y-%m', checkin_time) AS month,
+                COUNT(*) AS total
+            FROM checkin_records
+            WHERE strftime('%Y', checkin_time) = ?
+            GROUP BY month
+            ORDER BY month
+        """, (str(year),)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT
+                strftime('%Y-%m', checkin_time) AS month,
+                COUNT(*) AS total
+            FROM checkin_records
+            GROUP BY month
+            ORDER BY month
+        """).fetchall()
     conn.close()
     return [
         {"month": r["month"], "total": int(r["total"]) if r["total"] is not None else 0}
@@ -83,16 +94,27 @@ def get_monthly_stats():
     ]
 
 
-def get_weekday_stats():
+def get_weekday_stats(year=None):
     conn = get_connection()
-    rows = conn.execute("""
-        SELECT
-            strftime('%w', checkin_time) AS weekday,
-            COUNT(*) AS total
-        FROM checkin_records
-        GROUP BY weekday
-        ORDER BY weekday
-    """).fetchall()
+    if year:
+        rows = conn.execute("""
+            SELECT
+                strftime('%w', checkin_time) AS weekday,
+                COUNT(*) AS total
+            FROM checkin_records
+            WHERE strftime('%Y', checkin_time) = ?
+            GROUP BY weekday
+            ORDER BY weekday
+        """, (str(year),)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT
+                strftime('%w', checkin_time) AS weekday,
+                COUNT(*) AS total
+            FROM checkin_records
+            GROUP BY weekday
+            ORDER BY weekday
+        """).fetchall()
     conn.close()
 
     weekday_names = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]

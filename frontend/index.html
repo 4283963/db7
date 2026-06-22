@@ -53,6 +53,34 @@
             color: #e74c3c;
             font-size: 14px;
         }
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .filter-bar label {
+            font-size: 14px;
+            color: #666;
+        }
+        .filter-bar select {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+            min-width: 120px;
+        }
+        .filter-bar select:hover,
+        .filter-bar select:focus {
+            border-color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -74,16 +102,29 @@
             <div id="weekdayChart" class="chart-container">
                 <div class="loading">数据加载中...</div>
             </div>
+            <div class="filter-bar">
+                <label for="yearSelect">年份筛选：</label>
+                <select id="yearSelect">
+                    <option value="2024">2024 年</option>
+                    <option value="2025" selected>2025 年</option>
+                    <option value="2026">2026 年</option>
+                </select>
+            </div>
         </div>
     </div>
 
     <script>
         var API_BASE = "http://localhost:8000";
+        var monthlyChart = null;
+        var weekdayChart = null;
 
         function renderMonthlyChart(data) {
             var chartDom = document.getElementById("monthlyChart");
             chartDom.innerHTML = "";
-            var chart = echarts.init(chartDom);
+            if (!monthlyChart) {
+                monthlyChart = echarts.init(chartDom);
+                window.addEventListener("resize", function () { monthlyChart.resize(); });
+            }
 
             var months = data.map(function (d) { return d.month; });
             var totals = data.map(function (d) { return d.total; });
@@ -127,14 +168,16 @@
                 }]
             };
 
-            chart.setOption(option);
-            window.addEventListener("resize", function () { chart.resize(); });
+            monthlyChart.setOption(option, true);
         }
 
         function renderWeekdayChart(data) {
             var chartDom = document.getElementById("weekdayChart");
             chartDom.innerHTML = "";
-            var chart = echarts.init(chartDom);
+            if (!weekdayChart) {
+                weekdayChart = echarts.init(chartDom);
+                window.addEventListener("resize", function () { weekdayChart.resize(); });
+            }
 
             var names = data.map(function (d) { return d.weekday_name; });
             var totals = data.map(function (d) { return d.total; });
@@ -183,8 +226,12 @@
                 }]
             };
 
-            chart.setOption(option);
-            window.addEventListener("resize", function () { chart.resize(); });
+            weekdayChart.setOption(option, true);
+        }
+
+        function showLoading(containerId) {
+            var el = document.getElementById(containerId);
+            el.innerHTML = '<div class="loading">数据加载中...</div>';
         }
 
         function showError(containerId, msg) {
@@ -192,8 +239,18 @@
             el.innerHTML = '<div class="error">' + msg + '</div>';
         }
 
-        function fetchData() {
-            fetch(API_BASE + "/api/stats/monthly")
+        function fetchData(year) {
+            showLoading("monthlyChart");
+            showLoading("weekdayChart");
+
+            var monthUrl = API_BASE + "/api/stats/monthly";
+            var weekdayUrl = API_BASE + "/api/stats/weekday";
+            if (year) {
+                monthUrl += "?year=" + encodeURIComponent(year);
+                weekdayUrl += "?year=" + encodeURIComponent(year);
+            }
+
+            fetch(monthUrl)
                 .then(function (res) {
                     if (!res.ok) throw new Error("HTTP " + res.status);
                     return res.json();
@@ -203,7 +260,7 @@
                     showError("monthlyChart", "月度数据加载失败：" + err.message);
                 });
 
-            fetch(API_BASE + "/api/stats/weekday")
+            fetch(weekdayUrl)
                 .then(function (res) {
                     if (!res.ok) throw new Error("HTTP " + res.status);
                     return res.json();
@@ -214,7 +271,12 @@
                 });
         }
 
-        fetchData();
+        var yearSelect = document.getElementById("yearSelect");
+        yearSelect.addEventListener("change", function () {
+            fetchData(yearSelect.value);
+        });
+
+        fetchData(yearSelect.value);
     </script>
 </body>
 </html>
